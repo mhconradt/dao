@@ -5,6 +5,8 @@ import (
 	"context"
 	"dao/place"
 	"fmt"
+	"github.com/oleiade/reflections"
+	"reflect"
 
 	//THIRD PARTY
 	"github.com/mongodb/mongo-go-driver/bson"
@@ -14,30 +16,34 @@ import (
 )
 
 type TimeOption struct {
-	TimeID    string `bson:"timeId" json:"timeId,omitempty"`
-	StartTime string `bson:"startTime" json:"startTime,omitempty"`
-	EndTime   string `bson:"endTime" json:"endTime,omitempty"`
+	ID    string `bson:"timeId,omitempty" json:"timeId,omitempty"`
+	StartTime string `bson:"startTime,omitempty" json:"startTime,omitempty"`
+	EndTime   string `bson:"endTime,omitempty" json:"endTime,omitempty"`
 }
 
 type Member struct {
-	ID        string `bson:"id" json:"id,omitempty"`
-	FirstName string `bson:"firstName" json:"firstName,omitempty"`
-	LastName  string `bson:"lastName" json:"lastName,omitempty"`
-	ImageURL  string `bson:"imageURL" json:"imageURL,omitempty"`
+	ID        string `bson:"id,omitempty" json:"id,omitempty"`
+	FirstName string `bson:"firstName,omitempty" json:"firstName,omitempty"`
+	LastName  string `bson:"lastName,omitempty" json:"lastName,omitempty"`
+	ImageURL  string `bson:"imageURL,omitempty" json:"imageURL,omitempty"`
 }
 
 type Votes struct {
-	Times  map[string]int
-	Places map[string]int
+	Times  map[string]int `bson:"times,omitempty" json:"times,omitempty"`
+	Places map[string]int `bson:"places,omitempty" json:"places,omitempty"`
 }
 
 type Event struct {
 	ID      primitive.ObjectID `bson:"_id" json:"id,omitempty"`
-	Title   string             `bson:"title" json:"title"`
-	Times   []TimeOption       `bson:"times" json:"times"`
-	Members []Member           `bson:"members" json:"members"`
-	Places  []place.Place      `bson:"places" json:"places"`
-	Votes   Votes              `bson:"votes" json:"votes,omitempty"`
+	Title   string             `bson:"title,omitempty" json:"title"`
+	Times   []TimeOption       `bson:"times,omitempty" json:"times"`
+	Members []Member           `bson:"members,omitempty" json:"members"`
+	Places  []place.Place      `bson:"places,omitempty" json:"places"`
+	Votes   Votes              `bson:"votes,omitempty" json:"votes,omitempty"`
+}
+
+type UserVote struct {
+	ID string `json:"id,omitempty"`
 }
 
 type DAO struct {
@@ -64,18 +70,21 @@ func (dao *DAO) FindById(id string) (Event, error) { //DONE
 }
 
 func (dao *DAO) Upsert(event Event) (Event, error) { //DONE U+C
+	var e Event
 	if event.ID == primitive.NilObjectID {
 		event.ID = primitive.NewObjectID()
 	}
 	IDFilter := bson.M{"_id": event.ID}
-	update := bson.D{{"$set", event}} //mongo.NewUpdateOneModel().SetUpdate(user) ID filter works properly because it's same as FindById. The update model is incorrect.
-	opts := options.Update().SetUpsert(true)
-	result, err := dao.Collection.UpdateOne(context.Background(), IDFilter, update, opts)
-	if result.UpsertedID != nil {
-		UpsertedID := result.UpsertedID.(primitive.ObjectID)
-		event.ID = UpsertedID
+	fmt.Println(event)
+	updateObj, err := BuildUpdate(event)
+	fmt.Println(updateObj)
+	if err != nil {
+		return e, err
 	}
-	return event, err
+	update := bson.D{{"$set", updateObj}} //mongo.NewUpdateOneModel().SetUpdate(user) ID filter works properly because it's same as FindById. The update model is incorrect.
+	opts := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
+	err = dao.Collection.FindOneAndUpdate(context.Background(), IDFilter, update, opts).Decode(&e)
+	return e, err
 }
 
 func (dao *DAO) Delete(id string) (Event, error) {
@@ -98,7 +107,7 @@ func (dao *DAO) Append(filterId string, item interface{}, field string) error {
 		return err
 	}
 	IDFilter := bson.M{"_id": objectId}
-	update := bson.D{{"$addToSet", bson.M{(field): item}}}
+	update := bson.D{{"$push", bson.M{(field): item}}}
 	_, err = dao.Collection.UpdateOne(context.Background(), IDFilter, update)
 	return err
 }
@@ -123,7 +132,7 @@ func (dao *DAO) Remove(filterId string, bodyId string, field string) error {
 	return err
 }
 
-func (dao *DAO) IncrementField(collectionFilterId string, docFilterId string, field string) error {
+func (dao *DAO) IncrementField(collectionFilterId string, docFilterId string, field string, nestedField string) error {
 	eventId, err := primitive.ObjectIDFromHex(collectionFilterId)
 	if err != nil {
 		fmt.Println(err)
@@ -137,4 +146,43 @@ func (dao *DAO) IncrementField(collectionFilterId string, docFilterId string, fi
 	}
 	_, err = dao.Collection.UpdateOne(context.Background(), IDFilter, update)
 	return err
+}
+
+func BuildUpdate(event Event) (Event, error) {
+	var e Event
+	fieldList, err := reflections.Fields(event)
+	if err != nil {
+		return e, err
+	}
+	for _,v := range fieldList {
+		fieldVal, err := reflections.GetField(event, v)
+		if err != nil {
+			return e, err
+		}
+		if FieldNotNil(fieldVal) {
+			fmt.Println(fieldVal)
+			fmt.Println(reflect.TypeOf(fieldVal))
+			err = reflections.SetField(&e, v, fieldVal)
+			if err != nil {
+				return e, err
+			}
+		}
+	}
+	return e, err
+}
+
+func FieldNotNil (fieldVal interface{}) (bool) {
+	var emptyMembers []Member
+	var emptyTimes []TimeOption
+	var emptyPlaces []place.Place
+	if reflect.DeepEqual(fieldVal, emptyTimes) {
+		return false
+	}
+	if reflect.DeepEqual(fieldVal, emptyPlaces) {
+		return false
+	}
+	if reflect.DeepEqual(fieldVal, emptyMembers) {
+		return false
+	}
+	return true
 }

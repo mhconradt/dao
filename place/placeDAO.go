@@ -12,8 +12,8 @@ import (
 )
 
 type Location struct {
-	GeoPoint maps.LatLng `bson:"coordinates" json:"coordinates,omitempty"`
-	Address  Address     `bson:"address" json:"address,omitempty"`
+	GeoPoint *maps.LatLng `bson:"coordinates" json:"coordinates,omitempty"`
+	Address  *Address     `bson:"address" json:"address,omitempty"`
 }
 
 type Address struct {
@@ -25,10 +25,11 @@ type Address struct {
 
 type Place struct {
 	ID       string   `bson:"_id" json:"id"`
-	Name     string   `bson:"name" json:"name,omitempty"`
-	Location Location `bson:"location" json:"location,omitempty"`
-	ImageURL string   `bson:"imageURL" json:"imageURL,omitempty"`
-	Rating   float64  `bson:"rating" json:"rating,omitempty"`
+	Name     *string   `bson:"name" json:"name,omitempty"`
+	Location *Location `bson:"location" json:"location,omitempty"`
+	ImageURL *string   `bson:"imageURL" json:"imageURL,omitempty"`
+	Rating   *float64  `bson:"rating" json:"rating,omitempty"`
+	Categories *[]string `bson:"categories" json:"categories,omitempty"`
 }
 
 type DAO struct {
@@ -48,11 +49,16 @@ func (dao *DAO) FindById(id string) (Place, error) { //DONE
 }
 
 func (dao *DAO) Upsert(place Place) (Place, error) {
+	var p Place
 	IDFilter := bson.M{"_id": place.ID}
 	update := bson.D{{"$set", place}} //mongo.NewUpdateOneModel().SetUpdate(user) ID filter works properly because it's same as FindById. The update model is incorrect.
-	opts := options.Update().SetUpsert(true)
-	_, err := dao.Collection.UpdateOne(context.Background(), IDFilter, update, opts)
-	return place, err
+	opts := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
+	result := dao.Collection.FindOneAndUpdate(context.Background(), IDFilter, update, opts)
+	err := result.Decode(&p)
+	if err != nil {
+		return place, err
+	}
+	return p, err
 }
 
 func (dao *DAO) Delete(id string) (Place, error) {
