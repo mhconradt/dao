@@ -12,24 +12,24 @@ import (
 )
 
 type Location struct {
-	GeoPoint *maps.LatLng `bson:"coordinates" json:"coordinates,omitempty"`
-	Address  *Address     `bson:"address" json:"address,omitempty"`
+	GeoPoint *maps.LatLng `bson:"coordinates,omitempty" json:"coordinates,omitempty"`
+	Address  *Address     `bson:"address,omitempty" json:"address,omitempty"`
 }
 
 type Address struct {
-	Address1 string `bson:"address1" json:"address1"`
-	City     string `bson:"city" json:"city"`
-	State    string `bson:"state" json:"state"`
-	ZipCode  string `bson:"zipCode" json:"zipCode"`
+	Address1 string `bson:"address1,omitempty" json:"address1,omitempty"`
+	City     string `bson:"city,omitempty" json:"city,omitempty"`
+	State    string `bson:"state,omitempty" json:"state,omitempty"`
+	ZipCode  string `bson:"zipCode,omitempty" json:"zipCode,omitempty"`
 }
 
 type Place struct {
 	ID       string   `bson:"_id" json:"id"`
-	Name     *string   `bson:"name" json:"name,omitempty"`
-	Location *Location `bson:"location" json:"location,omitempty"`
-	ImageURL *string   `bson:"imageURL" json:"imageURL,omitempty"`
-	Rating   *float64  `bson:"rating" json:"rating,omitempty"`
-	Categories *[]string `bson:"categories" json:"categories,omitempty"`
+	Name     *string   `bson:"name,omitempty" json:"name,omitempty"`
+	Location *Location `bson:"location,omitempty" json:"location,omitempty"`
+	ImageURL *string   `bson:"imageURL,omitempty" json:"imageURL,omitempty"`
+	Rating   *float64  `bson:"rating,omitempty" json:"rating,omitempty"`
+	Categories *[]string `bson:"categories,omitempty" json:"categories,omitempty"`
 }
 
 type DAO struct {
@@ -53,10 +53,9 @@ func (dao *DAO) Upsert(place Place) (Place, error) {
 	IDFilter := bson.M{"_id": place.ID}
 	update := bson.D{{"$set", place}} //mongo.NewUpdateOneModel().SetUpdate(user) ID filter works properly because it's same as FindById. The update model is incorrect.
 	opts := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
-	result := dao.Collection.FindOneAndUpdate(context.Background(), IDFilter, update, opts)
-	err := result.Decode(&p)
+	err := dao.Collection.FindOneAndUpdate(context.Background(), IDFilter, update, opts).Decode(&p)
 	if err != nil {
-		return place, err
+		return p, err
 	}
 	return p, err
 }

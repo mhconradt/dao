@@ -5,8 +5,7 @@ import (
 	"context"
 	"dao/place"
 	"fmt"
-	"github.com/oleiade/reflections"
-	"reflect"
+	"time"
 
 	//THIRD PARTY
 	"github.com/mongodb/mongo-go-driver/bson"
@@ -55,15 +54,12 @@ func New(db *mongo.Database, collection *mongo.Collection) DAO {
 	return DAO{DB: db, Collection: collection}
 }
 
-func (dao *DAO) FindById(id string) (Event, error) { //DONE
+func (dao *DAO) FindById(filterId string) (Event, error) { //DONE
 	var e Event
-	objectId, err := primitive.ObjectIDFromHex(id)
+	IDFilter, err := GetIDFilter(filterId)
 	if err != nil {
-		fmt.Println(err)
 		return e, err
 	}
-	e.ID = objectId
-	IDFilter := bson.M{"_id": e.ID}
 	err = dao.Collection.FindOne(context.Background(), IDFilter).Decode(&e)
 	fmt.Println(err)
 	return e, err
@@ -75,50 +71,37 @@ func (dao *DAO) Upsert(event Event) (Event, error) { //DONE U+C
 		event.ID = primitive.NewObjectID()
 	}
 	IDFilter := bson.M{"_id": event.ID}
-	fmt.Println(event)
-	updateObj, err := BuildUpdate(event)
-	fmt.Println(updateObj)
-	if err != nil {
-		return e, err
-	}
-	update := bson.D{{"$set", updateObj}} //mongo.NewUpdateOneModel().SetUpdate(user) ID filter works properly because it's same as FindById. The update model is incorrect.
+	update := bson.D{{"$set", event}} //mongo.NewUpdateOneModel().SetUpdate(user) ID filter works properly because it's same as FindById. The update model is incorrect.
 	opts := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
-	err = dao.Collection.FindOneAndUpdate(context.Background(), IDFilter, update, opts).Decode(&e)
+	err := dao.Collection.FindOneAndUpdate(context.Background(), IDFilter, update, opts).Decode(&e)
 	return e, err
 }
 
-func (dao *DAO) Delete(id string) (Event, error) {
+func (dao *DAO) Delete(filterId string) (Event, error) {
 	var e Event
-	objectId, err := primitive.ObjectIDFromHex(id)
+	IDFilter, err := GetIDFilter(filterId)
 	if err != nil {
-		fmt.Println(err)
 		return e, err
 	}
-	e.ID = objectId
-	IDFilter := bson.M{"_id": e.ID}
 	err = dao.Collection.FindOneAndDelete(context.Background(), IDFilter).Decode(&e)
 	return e, err
 }
 
 func (dao *DAO) Append(filterId string, item interface{}, field string) error {
-	objectId, err := primitive.ObjectIDFromHex(filterId)
+	IDFilter, err := GetIDFilter(filterId)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
-	IDFilter := bson.M{"_id": objectId}
-	update := bson.D{{"$push", bson.M{(field): item}}}
+	update := bson.D{{"$addToSet", bson.M{(field): item}}}
 	_, err = dao.Collection.UpdateOne(context.Background(), IDFilter, update)
 	return err
 }
 
 func (dao *DAO) Remove(filterId string, bodyId string, field string) error {
-	eventId, err := primitive.ObjectIDFromHex(filterId)
+	IDFilter, err := GetIDFilter(filterId)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
-	IDFilter := bson.M{"_id": eventId}
 	update := bson.M{
 		"$pull": bson.M{
 			(field): bson.M{
@@ -132,22 +115,31 @@ func (dao *DAO) Remove(filterId string, bodyId string, field string) error {
 	return err
 }
 
-func (dao *DAO) IncrementField(collectionFilterId string, docFilterId string, field string, nestedField string) error {
+func (dao *DAO) IncrementField(collectionFilterId string, field string) error {
 	eventId, err := primitive.ObjectIDFromHex(collectionFilterId)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
-	compoundField := fmt.Sprintf("%v.%v", field, docFilterId)
 	IDFilter := bson.M{"_id": eventId}
 	update := bson.M{"$inc": bson.M{
-		(compoundField): 1,
-	},
+		(field): 1,
+		},
 	}
+	fmt.Println(time.Now())
 	_, err = dao.Collection.UpdateOne(context.Background(), IDFilter, update)
+	fmt.Println(time.Now())
 	return err
 }
 
+func GetIDFilter(filterId string) (bson.M, error) {
+	objectId, err := primitive.ObjectIDFromHex(filterId)
+	if err != nil {
+		return bson.M{}, err
+	}
+	return bson.M{"_id": objectId}, err
+}
+/*
 func BuildUpdate(event Event) (Event, error) {
 	var e Event
 	fieldList, err := reflections.Fields(event)
@@ -186,3 +178,4 @@ func FieldNotNil (fieldVal interface{}) (bool) {
 	}
 	return true
 }
+*/
