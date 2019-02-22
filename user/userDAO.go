@@ -3,11 +3,11 @@ package user
 import (
 	//NATIVE
 	"context"
-	"dao/place"
 	"fmt"
 	//  "dao/event"
 
 	//THIRD PARTY
+	"github.com/mhconradt/dao/place"
 	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/mongodb/mongo-go-driver/mongo"
 	"github.com/mongodb/mongo-go-driver/mongo/options"

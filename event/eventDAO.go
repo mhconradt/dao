@@ -3,9 +3,9 @@ package event
 import (
 	//NATIVE
 	"context"
-	"dao/place"
 
 	//THIRD PARTY
+	"github.com/mhconradt/dao/place"
 	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/mongodb/mongo-go-driver/bson/primitive"
 	"github.com/mongodb/mongo-go-driver/mongo"
