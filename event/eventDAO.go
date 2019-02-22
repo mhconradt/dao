@@ -4,8 +4,6 @@ import (
 	//NATIVE
 	"context"
 	"dao/place"
-	"fmt"
-	"time"
 
 	//THIRD PARTY
 	"github.com/mongodb/mongo-go-driver/bson"
@@ -15,7 +13,7 @@ import (
 )
 
 type TimeOption struct {
-	ID    string `bson:"timeId,omitempty" json:"timeId,omitempty"`
+	ID    string `bson:"id,omitempty" json:"id,omitempty"`
 	StartTime string `bson:"startTime,omitempty" json:"startTime,omitempty"`
 	EndTime   string `bson:"endTime,omitempty" json:"endTime,omitempty"`
 }
@@ -28,21 +26,18 @@ type Member struct {
 }
 
 type Votes struct {
-	Times  map[string]int `bson:"times,omitempty" json:"times,omitempty"`
-	Places map[string]int `bson:"places,omitempty" json:"places,omitempty"`
+	Times  *map[string][]string `bson:"times,omitempty" json:"times,omitempty"`
+	Places *map[string][]string `bson:"places,omitempty" json:"places,omitempty"`
 }
 
 type Event struct {
-	ID      primitive.ObjectID `bson:"_id" json:"id,omitempty"`
-	Title   string             `bson:"title,omitempty" json:"title"`
-	Times   []TimeOption       `bson:"times,omitempty" json:"times"`
-	Members []Member           `bson:"members,omitempty" json:"members"`
-	Places  []place.Place      `bson:"places,omitempty" json:"places"`
-	Votes   Votes              `bson:"votes,omitempty" json:"votes,omitempty"`
-}
-
-type UserVote struct {
-	ID string `json:"id,omitempty"`
+	ID      primitive.ObjectID `bson:"_id" json:"id"`
+	Title   string             `bson:"title,omitempty" json:"title,omitempty"`
+	Times   []TimeOption       `bson:"times,omitempty" json:"times,omitempty"`
+	Members []Member           `bson:"members,omitempty" json:"members,omitempty"`
+	Places  []place.Place      `bson:"places,omitempty" json:"places,omitempty"`
+	PlaceVotes   *map[string][]string              `bson:"placesVotes,omitempty" json:"placesVotes,omitempty"`
+	TimeVotes   *map[string][]string              `bson:"timesVotes,omitempty" json:"timesVotes,omitempty"`
 }
 
 type DAO struct {
@@ -61,7 +56,6 @@ func (dao *DAO) FindById(filterId string) (Event, error) { //DONE
 		return e, err
 	}
 	err = dao.Collection.FindOne(context.Background(), IDFilter).Decode(&e)
-	fmt.Println(err)
 	return e, err
 }
 
@@ -71,7 +65,8 @@ func (dao *DAO) Upsert(event Event) (Event, error) { //DONE U+C
 		event.ID = primitive.NewObjectID()
 	}
 	IDFilter := bson.M{"_id": event.ID}
-	update := bson.D{{"$set", event}} //mongo.NewUpdateOneModel().SetUpdate(user) ID filter works properly because it's same as FindById. The update model is incorrect.
+
+	update := bson.M{"$set": event} //mongo.NewUpdateOneModel().SetUpdate(user) ID filter works properly because it's same as FindById. The update model is incorrect.
 	opts := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
 	err := dao.Collection.FindOneAndUpdate(context.Background(), IDFilter, update, opts).Decode(&e)
 	return e, err
@@ -87,21 +82,13 @@ func (dao *DAO) Delete(filterId string) (Event, error) {
 	return e, err
 }
 
-func (dao *DAO) Append(filterId string, item interface{}, field string) error {
-	IDFilter, err := GetIDFilter(filterId)
-	if err != nil {
-		return err
-	}
-	update := bson.D{{"$addToSet", bson.M{(field): item}}}
-	_, err = dao.Collection.UpdateOne(context.Background(), IDFilter, update)
-	return err
+func (dao *DAO) Append(filterId string, item interface{}, field string) (Event, error) {
+	update := bson.M{"$addToSet": bson.M{(field): item}}
+	event, err := dao.ExecuteUpdate(filterId, update)
+	return event, err
 }
 
-func (dao *DAO) Remove(filterId string, bodyId string, field string) error {
-	IDFilter, err := GetIDFilter(filterId)
-	if err != nil {
-		return err
-	}
+func (dao *DAO) Remove(filterId string, bodyId string, field string) (Event, error) {
 	update := bson.M{
 		"$pull": bson.M{
 			(field): bson.M{
@@ -111,25 +98,17 @@ func (dao *DAO) Remove(filterId string, bodyId string, field string) error {
 			},
 		},
 	}
-	_, err = dao.Collection.UpdateOne(context.Background(), IDFilter, update)
-	return err
+	event, err := dao.ExecuteUpdate(filterId, update)
+	return event, err
 }
 
-func (dao *DAO) IncrementField(collectionFilterId string, field string) error {
-	eventId, err := primitive.ObjectIDFromHex(collectionFilterId)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-	IDFilter := bson.M{"_id": eventId}
+func (dao *DAO) IncrementField(filterId string, field string) (Event, error) {
 	update := bson.M{"$inc": bson.M{
 		(field): 1,
 		},
 	}
-	fmt.Println(time.Now())
-	_, err = dao.Collection.UpdateOne(context.Background(), IDFilter, update)
-	fmt.Println(time.Now())
-	return err
+	event, err := dao.ExecuteUpdate(filterId, update)
+	return event, err
 }
 
 func GetIDFilter(filterId string) (bson.M, error) {
@@ -139,43 +118,14 @@ func GetIDFilter(filterId string) (bson.M, error) {
 	}
 	return bson.M{"_id": objectId}, err
 }
-/*
-func BuildUpdate(event Event) (Event, error) {
+
+func (dao *DAO) ExecuteUpdate(id string, update bson.M) (Event, error) {
 	var e Event
-	fieldList, err := reflections.Fields(event)
+	IDFilter, err := GetIDFilter(id)
 	if err != nil {
 		return e, err
 	}
-	for _,v := range fieldList {
-		fieldVal, err := reflections.GetField(event, v)
-		if err != nil {
-			return e, err
-		}
-		if FieldNotNil(fieldVal) {
-			fmt.Println(fieldVal)
-			fmt.Println(reflect.TypeOf(fieldVal))
-			err = reflections.SetField(&e, v, fieldVal)
-			if err != nil {
-				return e, err
-			}
-		}
-	}
+	opts := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
+	err = dao.Collection.FindOneAndUpdate(context.Background(), IDFilter, update, opts).Decode(&e)
 	return e, err
 }
-
-func FieldNotNil (fieldVal interface{}) (bool) {
-	var emptyMembers []Member
-	var emptyTimes []TimeOption
-	var emptyPlaces []place.Place
-	if reflect.DeepEqual(fieldVal, emptyTimes) {
-		return false
-	}
-	if reflect.DeepEqual(fieldVal, emptyPlaces) {
-		return false
-	}
-	if reflect.DeepEqual(fieldVal, emptyMembers) {
-		return false
-	}
-	return true
-}
-*/

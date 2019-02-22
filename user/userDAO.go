@@ -20,7 +20,18 @@ type UserRecord struct {
 	Birthday  string        `bson:"birthday,omitempty" json:"birthday,omitempty"`
 	ImageURL  string        `bson:"imageURL,omitempty" json:"imageURL,omitempty"`
 	Friends   []string      `bson:"friends,omitempty" json:"friends,omitempty"`
-	Places    []string 			`bson:"places,omitempty" json:"places,omitempty"`
+	Requests RequestMap `bson:"requests,omitempty" json:"requests,omitempty"`
+	Places    PlacesMap			`bson:"places,omitempty" json:"places,omitempty"`
+}
+
+type RequestMap struct {
+	Sent []string `bson:"sent,omitempty" json:"sent,omitempty"`
+	Received []string `bson:"received,omitempty" json:"received,omitempty"`
+}
+
+type PlacesMap struct {
+	Saved []string `bson:"saved,omitempty" json:"saved,omitempty"`
+	Disliked []string `bson:"disliked,omitempty" json:"disliked,omitempty"`
 }
 
 type UserFriends struct {
@@ -56,13 +67,13 @@ func (dao *DAO) FindById(id string) (UserRecord, error) {
 	return u, err
 }
 
-func (dao *DAO) Upsert(user UserRecord) error {
-	fmt.Println(user)
+func (dao *DAO) Upsert(user UserRecord) (UserRecord, error) {
+	var u UserRecord
 	IDFilter := bson.M{"_id": user.ID}
 	update := bson.D{{"$set", user}} //mongo.NewUpdateOneModel().SetUpdate(user) ID filter works properly because it's same as FindById. The update model is incorrect.
-	opts := options.Update().SetUpsert(true)
-	_, err := dao.Collection.UpdateOne(context.Background(), IDFilter, update, opts)
-	return err
+	opts := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
+	err := dao.Collection.FindOneAndUpdate(context.Background(), IDFilter, update, opts).Decode(&u)
+	return u, err
 }
 
 func (dao *DAO) Delete(id string) (UserRecord, error) {
@@ -72,18 +83,24 @@ func (dao *DAO) Delete(id string) (UserRecord, error) {
 	return u, err
 }
 
-func (dao *DAO) Append(filterId string, bodyId string, field string) error {
+func (dao *DAO) Append(filterId string, bodyId string, field string, errors chan<- error, results chan<- UserRecord) {
+	var u UserRecord
 	IDFilter := bson.M{"_id": filterId}
 	update := bson.D{{"$addToSet", bson.M{(field): bodyId}}}
-	_, err := dao.Collection.UpdateOne(context.Background(), IDFilter, update)
-	return err
+	opts := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
+	err := dao.Collection.FindOneAndUpdate(context.Background(), IDFilter, update, opts).Decode(&u)
+	results <- u
+	errors <- err
 }
 
-func (dao *DAO) Remove(filterId string, bodyId string, field string) error {
+func (dao *DAO) Remove(filterId string, bodyId string, field string, errors chan<- error, results chan<- UserRecord) {
+	var u UserRecord
 	IDFilter := bson.M{"_id": filterId}
 	update := bson.D{{"$pull", bson.M{(field): bodyId}}}
-	_, err := dao.Collection.UpdateOne(context.Background(), IDFilter, update)
-	return err
+	opts := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
+	err := dao.Collection.FindOneAndUpdate(context.Background(), IDFilter, update, opts).Decode(&u)
+	results <- u
+	errors <- err
 }
 
 func (dao *DAO) FriendLookup(filterId string, filterField string) (UserFriends, error) {
@@ -96,7 +113,7 @@ func (dao *DAO) FriendLookup(filterId string, filterField string) (UserFriends, 
 			"from":         "User",
 			"localField":   filterField,
 			"foreignField": "_id",
-			"as":           filterField,
+			"as":           "friends",
 		},
 		},
 	}
@@ -154,30 +171,22 @@ func (dao *DAO) PlaceLookup(filterId string, filterField string) (UserPlaces, er
 	return up, err
 }
 
-func (dao *DAO) SymmetricRemove(firstId string, secondId string, fields []string) error {
+func (dao *DAO) SymmetricRemove(firstId string, secondId string, fields []string, errors chan<- error, results chan<- UserRecord) {
 	deleteField := fields[0]
-	err := dao.Remove(firstId, secondId, deleteField)
-	if err != nil {
-		return err
-	}
+	go dao.Remove(firstId, secondId, deleteField, errors, results)
 	if len(fields) > 1 {
 		deleteField = fields[1]
 	}
-	err = dao.Remove(secondId, firstId, deleteField)
-	return err
+	go dao.Remove(secondId, firstId, deleteField, errors, results)
 }
 
-func (dao *DAO) SymmetricAppend(firstId string, secondId string, fields []string) error {
+func (dao *DAO) SymmetricAppend(firstId string, secondId string, fields []string, errors chan<- error, results chan<- UserRecord) {
 	appendField := fields[0]
-	err := dao.Append(firstId, secondId, appendField)
-	if err != nil {
-		return err
-	}
+	go dao.Append(firstId, secondId, appendField, errors, results)
 	if len(fields) > 1 {
 		appendField = fields[1]
 	}
-	err = dao.Append(secondId, firstId, appendField)
-	return err
+	go dao.Append(secondId, firstId, appendField, errors, results)
 }
 
 func PrefixField(field string) string {
