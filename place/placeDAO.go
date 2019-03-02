@@ -9,6 +9,7 @@ import (
 	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/mongodb/mongo-go-driver/mongo"
 	"github.com/mongodb/mongo-go-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"googlemaps.github.io/maps"
 )
 
@@ -84,7 +85,7 @@ func (dao *DAO) Upsert(place Place) (Place, error) {
 func (dao *DAO) BulkWrite(p []Place) (*mongo.BulkWriteResult, error) {
 	numPlaces := len(p)
 	inputChannel := make(chan Place, numPlaces)
-	outputChannel := make(chan *mongo.InsertOneModel)
+	outputChannel := make(chan mongo.InsertOneModel)
 	signalChannel := make(chan bool)
 	for i := 0; i < 200; i++ {
 		go MakeModel(inputChannel, outputChannel, signalChannel)
@@ -120,6 +121,7 @@ func (dao *DAO) Delete(id string) (Place, error) {
 
 func MakeModel(inputChannel <-chan Place, outputChannel chan<- *mongo.InsertOneModel, done chan<- bool) {
 	for place := range inputChannel {
+		place.ID = primitive.NewObjectId()
 		doc := bson.M{"$set": place}
 		newModel := mongo.NewInsertOneModel().SetDocument(doc)
 		outputChannel <- newModel
