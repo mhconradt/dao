@@ -123,7 +123,10 @@ func (dao *DAO) Delete(id string) (Place, error) {
 func MakeModel(inputChannel <-chan Place, outputChannel chan<- *mongo.InsertOneModel, done chan<- bool) {
 	for place := range inputChannel {
 		place.ID = primitive.NewObjectID()
-		doc := bson.D{{"$set", place}}
+		doc := bson.D{{"$set", bson.D{
+				{"_id", place.ID},
+				{"name", place.Name},
+			}}}
 		fmt.Println(doc)
 		newModel := mongo.NewInsertOneModel().SetDocument(doc)
 		outputChannel <- newModel
