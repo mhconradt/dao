@@ -16,6 +16,23 @@ type Location struct {
 	Address  *Address     `bson:"address,omitempty" json:"address,omitempty"`
 }
 
+type HourForDay struct {
+	Start int `bson:"start,omitempty" json:"start,omitempty"`
+	End   int `bson:"end,omitempty" json:"end,omitempty"`
+}
+
+// Closed or all day
+
+type Hours struct {
+	Sunday    HourForDay `bson:"sunday,omitempty" json:"sunday,omitempty"`
+	Monday    HourForDay `bson:"monday,omitempty" json:"monday,omitempty"`
+	Tuesday   HourForDay `bson:"tuesday,omitempty" json:"tuesday,omitempty"`
+	Wednesday HourForDay `bson:"wednesday,omitempty" json:"wednesday,omitempty"`
+	Thursday  HourForDay `bson:"thursday,omitempty" json:"thursday,omitempty"`
+	Friday    HourForDay `bson:"friday,omitempty" json:"friday,omitempty"`
+	Saturday  HourForDay `bson:"saturday,omitempty" json:"saturday,omitempty"`
+}
+
 type Address struct {
 	Address1 string `bson:"address1,omitempty" json:"address1,omitempty"`
 	City     string `bson:"city,omitempty" json:"city,omitempty"`
@@ -24,12 +41,15 @@ type Address struct {
 }
 
 type Place struct {
-	ID       string   `bson:"_id" json:"id"`
-	Name     *string   `bson:"name,omitempty" json:"name,omitempty"`
-	Location *Location `bson:"location,omitempty" json:"location,omitempty"`
-	ImageURL *string   `bson:"imageURL,omitempty" json:"imageURL,omitempty"`
-	Rating   *float64  `bson:"rating,omitempty" json:"rating,omitempty"`
+	ID         string    `bson:"_id" json:"id"`
+	Name       *string   `bson:"name,omitempty" json:"name,omitempty"`
+	Location   *Location `bson:"location,omitempty" json:"location,omitempty"`
+	ImageURL   *string   `bson:"imageURL,omitempty" json:"imageURL,omitempty"`
+	URL        *string   `bson:"url,omitempty" json:"url,omitempty"`
+	Rating     *float64  `bson:"rating,omitempty" json:"rating,omitempty"`
+	Price      *float32  `bson:"price,omitempty" json:"price,omitempty"`
 	Categories *[]string `bson:"categories,omitempty" json:"categories,omitempty"`
+	Hours      *Hours    `bson:"hours,omitempty" json:"hours,omitempty"`
 }
 
 type DAO struct {
@@ -60,9 +80,46 @@ func (dao *DAO) Upsert(place Place) (Place, error) {
 	return p, err
 }
 
+func (dao *DAO) BulkWrite(p []Place) (*mongo.BulkWriteResult, error) {
+	numPlaces := len(p)
+	inputChannel := make(chan Place, numPlaces)
+	outputChannel := make(chan *mongo.InsertOneModel)
+	signalChannel := make(chan bool)
+	for i := 0; i < 200; i++ {
+		go MakeModel(inputChannel, outputChannel, signalChannel)
+	}
+	for _, place := range p {
+		inputChannel <- place
+	}
+	close(inputChannel)
+	var modelList []mongo.WriteModel
+	runLoop := true
+	for runLoop {
+		modelList = append(modelList, model)
+		if len(modelList) == numPlaces {
+			runLoop = false
+		}
+	}
+	opts := options.BulkWrite().SetOrdered(false)
+	writeResult, err := dao.Collection.BulkWrite(context.Background(), modelList, opts)
+	if err != nil {
+		return writeResult, err
+	}
+	return writeResult, err
+}
+
 func (dao *DAO) Delete(id string) (Place, error) {
 	var p Place
 	IDFilter := bson.M{"_id": id}
 	err := dao.Collection.FindOneAndDelete(context.Background(), IDFilter).Decode(&p)
 	return p, err
+}
+
+func MakeModel(inputChannel <-chan Place, outputChannel chan<- *mongo.InsertOneModel, done chan<- bool) {
+	for place := range inputChannel {
+		doc := bson.M{"$set": place}
+		newModel := mongo.NewInsertOneModel().SetDocument(doc)
+		outputChannel <- newModel
+	}
+	return
 }
