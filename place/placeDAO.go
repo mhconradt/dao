@@ -39,19 +39,19 @@ type Address struct {
 	Address1 string `bson:"address1,omitempty" json:"address1,omitempty"`
 	City     string `bson:"city,omitempty" json:"city,omitempty"`
 	State    string `bson:"state,omitempty" json:"state,omitempty"`
-	ZipCode  int `bson:"zipCode,omitempty" json:"zipCode,omitempty"`
+	ZipCode  int    `bson:"zipCode,omitempty" json:"zipCode,omitempty"`
 }
 
 type Place struct {
-	ID         string    `bson:"_id" json:"id"`
-	Name       string   `bson:"name,omitempty" json:"name,omitempty"`
-	Location   Location `bson:"location,omitempty" json:"location,omitempty"`
-	ImageURL   string   `bson:"imageURL,omitempty" json:"imageURL,omitempty"`
-	URL        string   `bson:"url,omitempty" json:"url,omitempty"`
-	Rating     float64  `bson:"rating,omitempty" json:"rating,omitempty"`
-	Price      float32  `bson:"price,omitempty" json:"price,omitempty"`
-	Categories []string `bson:"categories,omitempty" json:"categories,omitempty"`
-	Hours      Hours    `bson:"hours,omitempty" json:"hours,omitempty"`
+	ID         primitive.ObjectID `bson:"_id" json:"id"`
+	Name       string             `bson:"name,omitempty" json:"name,omitempty"`
+	Location   Location           `bson:"location,omitempty" json:"location,omitempty"`
+	ImageURL   string             `bson:"imageURL,omitempty" json:"imageURL,omitempty"`
+	URL        string             `bson:"url,omitempty" json:"url,omitempty"`
+	Rating     float64            `bson:"rating,omitempty" json:"rating,omitempty"`
+	Price      float32            `bson:"price,omitempty" json:"price,omitempty"`
+	Categories []string           `bson:"categories,omitempty" json:"categories,omitempty"`
+	Hours      Hours              `bson:"hours,omitempty" json:"hours,omitempty"`
 }
 
 type DAO struct {
@@ -85,7 +85,7 @@ func (dao *DAO) Upsert(place Place) (Place, error) {
 func (dao *DAO) BulkWrite(p []Place) (*mongo.BulkWriteResult, error) {
 	numPlaces := len(p)
 	inputChannel := make(chan Place, numPlaces)
-	outputChannel := make(chan mongo.InsertOneModel)
+	outputChannel := make(chan *mongo.InsertOneModel)
 	signalChannel := make(chan bool)
 	for i := 0; i < 200; i++ {
 		go MakeModel(inputChannel, outputChannel, signalChannel)
@@ -121,7 +121,7 @@ func (dao *DAO) Delete(id string) (Place, error) {
 
 func MakeModel(inputChannel <-chan Place, outputChannel chan<- *mongo.InsertOneModel, done chan<- bool) {
 	for place := range inputChannel {
-		place.ID = primitive.NewObjectId()
+		place.ID = primitive.NewObjectID()
 		doc := bson.M{"$set": place}
 		newModel := mongo.NewInsertOneModel().SetDocument(doc)
 		outputChannel <- newModel
