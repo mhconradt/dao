@@ -107,6 +107,7 @@ func (dao *DAO) BulkWrite(p []Place) (*mongo.BulkWriteResult, error) {
 	fmt.Println(modelList)
 	writeResult, err := dao.Collection.BulkWrite(context.Background(), modelList, opts)
 	if err != nil {
+	fmt.Println(err)
 		return writeResult, err
 	}
 	return writeResult, err
@@ -123,6 +124,7 @@ func MakeModel(inputChannel <-chan Place, outputChannel chan<- *mongo.InsertOneM
 	for place := range inputChannel {
 		place.ID = primitive.NewObjectID()
 		doc := bson.M{"$set": place}
+		fmt.Println(doc)
 		newModel := mongo.NewInsertOneModel().SetDocument(doc)
 		outputChannel <- newModel
 	}
