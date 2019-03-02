@@ -12,44 +12,44 @@ import (
 )
 
 type Location struct {
-	GeoPoint *maps.LatLng `bson:"coordinates,omitempty" json:"coordinates,omitempty"`
-	Address  *Address     `bson:"address,omitempty" json:"address,omitempty"`
-}
-
-type HourForDay struct {
-	Start int `bson:"start,omitempty" json:"start,omitempty"`
-	End   int `bson:"end,omitempty" json:"end,omitempty"`
+	GeoPoint maps.LatLng `bson:"coordinates,omitempty" json:"coordinates,omitempty"`
+	Address  Address     `bson:"address,omitempty" json:"address,omitempty"`
 }
 
 // Closed or all day
 
+type TimeRange struct {
+	Start int `bson:"start,omitempty" json:"start,omitempty"`
+	End   int `bson:"end,omitempty" json:"end,omitempty"`
+}
+
 type Hours struct {
-	Sunday    HourForDay `bson:"sunday,omitempty" json:"sunday,omitempty"`
-	Monday    HourForDay `bson:"monday,omitempty" json:"monday,omitempty"`
-	Tuesday   HourForDay `bson:"tuesday,omitempty" json:"tuesday,omitempty"`
-	Wednesday HourForDay `bson:"wednesday,omitempty" json:"wednesday,omitempty"`
-	Thursday  HourForDay `bson:"thursday,omitempty" json:"thursday,omitempty"`
-	Friday    HourForDay `bson:"friday,omitempty" json:"friday,omitempty"`
-	Saturday  HourForDay `bson:"saturday,omitempty" json:"saturday,omitempty"`
+	Sunday    []TimeRange `bson:"sunday,omitempty" json:"sunday,omitempty"`
+	Monday    []TimeRange `bson:"monday,omitempty" json:"monday,omitempty"`
+	Tuesday   []TimeRange `bson:"tuesday,omitempty" json:"tuesday,omitempty"`
+	Wednesday []TimeRange `bson:"wednesday,omitempty" json:"wednesday,omitempty"`
+	Thursday  []TimeRange `bson:"thursday,omitempty" json:"thursday,omitempty"`
+	Friday    []TimeRange `bson:"friday,omitempty" json:"friday,omitempty"`
+	Saturday  []TimeRange `bson:"saturday,omitempty" json:"saturday,omitempty"`
 }
 
 type Address struct {
 	Address1 string `bson:"address1,omitempty" json:"address1,omitempty"`
 	City     string `bson:"city,omitempty" json:"city,omitempty"`
 	State    string `bson:"state,omitempty" json:"state,omitempty"`
-	ZipCode  string `bson:"zipCode,omitempty" json:"zipCode,omitempty"`
+	ZipCode  int `bson:"zipCode,omitempty" json:"zipCode,omitempty"`
 }
 
 type Place struct {
 	ID         string    `bson:"_id" json:"id"`
-	Name       *string   `bson:"name,omitempty" json:"name,omitempty"`
-	Location   *Location `bson:"location,omitempty" json:"location,omitempty"`
-	ImageURL   *string   `bson:"imageURL,omitempty" json:"imageURL,omitempty"`
-	URL        *string   `bson:"url,omitempty" json:"url,omitempty"`
-	Rating     *float64  `bson:"rating,omitempty" json:"rating,omitempty"`
-	Price      *float32  `bson:"price,omitempty" json:"price,omitempty"`
-	Categories *[]string `bson:"categories,omitempty" json:"categories,omitempty"`
-	Hours      *Hours    `bson:"hours,omitempty" json:"hours,omitempty"`
+	Name       string   `bson:"name,omitempty" json:"name,omitempty"`
+	Location   Location `bson:"location,omitempty" json:"location,omitempty"`
+	ImageURL   string   `bson:"imageURL,omitempty" json:"imageURL,omitempty"`
+	URL        string   `bson:"url,omitempty" json:"url,omitempty"`
+	Rating     float64  `bson:"rating,omitempty" json:"rating,omitempty"`
+	Price      float32  `bson:"price,omitempty" json:"price,omitempty"`
+	Categories []string `bson:"categories,omitempty" json:"categories,omitempty"`
+	Hours      Hours    `bson:"hours,omitempty" json:"hours,omitempty"`
 }
 
 type DAO struct {
