@@ -95,6 +95,7 @@ func (dao *DAO) BulkWrite(p []Place) (*mongo.BulkWriteResult, error) {
 	var modelList []mongo.WriteModel
 	runLoop := true
 	for runLoop {
+		model := <-outputChannel
 		modelList = append(modelList, model)
 		if len(modelList) == numPlaces {
 			runLoop = false
