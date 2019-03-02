@@ -14,32 +14,35 @@ import (
 )
 
 type UserRecord struct {
-	ID        string        `bson:"_id" json:"id"`
-	FirstName string        `bson:"firstName,omitempty" json:"firstName,omitempty"`
-	LastName  string        `bson:"lastName,omitempty" json:"lastName,omitempty"`
-	Birthday  string        `bson:"birthday,omitempty" json:"birthday,omitempty"`
-	ImageURL  string        `bson:"imageURL,omitempty" json:"imageURL,omitempty"`
-	Friends   []string      `bson:"friends,omitempty" json:"friends,omitempty"`
-	Requests RequestMap `bson:"requests,omitempty" json:"requests,omitempty"`
-	Places    PlacesMap			`bson:"places,omitempty" json:"places,omitempty"`
+	ID          string     `bson:"_id" json:"id"`
+	UserName    string     `bson:"userName,omitempty" json:"userName,omitempty"`
+	FirstName   string     `bson:"firstName,omitempty" json:"firstName,omitempty"`
+	LastName    string     `bson:"lastName,omitempty" json:"lastName,omitempty"`
+	Birthday    string     `bson:"birthday,omitempty" json:"birthday,omitempty"`
+	Email       string     `bson:"email,omitempty" json:"email,omitempty"`
+	PhoneNumber string     `bson:"phoneNumber,omitempty" json:"phoneNumber,omitempty"`
+	ImageURL    string     `bson:"imageURL,omitempty" json:"imageURL,omitempty"`
+	Friends     []string   `bson:"friends,omitempty" json:"friends,omitempty"`
+	Requests    RequestMap `bson:"requests,omitempty" json:"requests,omitempty"`
+	Places      PlacesMap  `bson:"places,omitempty" json:"places,omitempty"`
 }
 
 type RequestMap struct {
-	Sent []string `bson:"sent,omitempty" json:"sent,omitempty"`
+	Sent     []string `bson:"sent,omitempty" json:"sent,omitempty"`
 	Received []string `bson:"received,omitempty" json:"received,omitempty"`
 }
 
 type PlacesMap struct {
-	Saved []string `bson:"saved,omitempty" json:"saved,omitempty"`
+	Saved    []string `bson:"saved,omitempty" json:"saved,omitempty"`
 	Disliked []string `bson:"disliked,omitempty" json:"disliked,omitempty"`
 }
 
 type UserFriends struct {
-	Friends   []Friend      `bson:"friends" json:"friends,omitempty"`
+	Friends []Friend `bson:"friends" json:"friends,omitempty"`
 }
 
 type UserPlaces struct {
-	Places    []place.Place `bson:"places" json:"places,omitempty"`
+	Places []place.Place `bson:"places" json:"places,omitempty"`
 }
 
 type Friend struct {
@@ -64,6 +67,13 @@ func (dao *DAO) FindById(id string) (UserRecord, error) {
 	IDFilter := bson.M{"_id": id}
 	fmt.Println(IDFilter)
 	err := dao.Collection.FindOne(context.Background(), IDFilter).Decode(&u)
+	return u, err
+}
+
+func (dao *DAO) Find(field string, value string) (UserRecord, error) {
+	var u UserRecord
+	filter := bson.M{(field): value}
+	err := dao.Collection.FindOne(context.Background(), filter).Decode(&u)
 	return u, err
 }
 
@@ -130,7 +140,7 @@ func (dao *DAO) FriendLookup(filterId string, filterField string) (UserFriends, 
 		}
 		itemList = append(itemList, u)
 	}
-	if (len(itemList) > 0) {
+	if len(itemList) > 0 {
 		friends := itemList[0]
 		return friends, err
 	}
@@ -164,7 +174,7 @@ func (dao *DAO) PlaceLookup(filterId string, filterField string) (UserPlaces, er
 		}
 		itemList = append(itemList, u)
 	}
-	if (len(itemList) > 0) {
+	if len(itemList) > 0 {
 		places := itemList[0]
 		return places, err
 	}
