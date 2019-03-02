@@ -104,7 +104,6 @@ func (dao *DAO) BulkWrite(p []Place) (*mongo.BulkWriteResult, error) {
 		}
 	}
 	opts := options.BulkWrite()
-	fmt.Println(modelList)
 	writeResult, err := dao.Collection.BulkWrite(context.Background(), modelList, opts)
 	if err != nil {
 	fmt.Println(err)
@@ -123,12 +122,20 @@ func (dao *DAO) Delete(id string) (Place, error) {
 func MakeModel(inputChannel <-chan Place, outputChannel chan<- *mongo.InsertOneModel, done chan<- bool) {
 	for place := range inputChannel {
 		place.ID = primitive.NewObjectID()
-		doc := bson.D{{"$set", bson.D{
-				{"_id", place.ID},
-				{"name", place.Name},
-			}}}
+		doc := bson.D{
+			{"_id", place.ID},
+			{"name", place.Name},
+			{"location", place.Location},
+			{"imageURL", place.ImageURL},
+			{"url", place.URL},
+			{"rating", place.Rating},
+			{"price", place.Price},
+			{"categories", place.Categories},
+			{"hours", place.Hours},
+		}
 		fmt.Println(doc)
 		newModel := mongo.NewInsertOneModel().SetDocument(doc)
+		fmt.Println(*newModel)
 		outputChannel <- newModel
 	}
 	return
