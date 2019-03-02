@@ -103,7 +103,7 @@ func (dao *DAO) BulkWrite(p []Place) (*mongo.BulkWriteResult, error) {
 		}
 	}
 	opts := options.BulkWrite().SetOrdered(false)
-	fmt.Println(len(modelList))
+	fmt.Println(modelList)
 	writeResult, err := dao.Collection.BulkWrite(context.Background(), modelList, opts)
 	if err != nil {
 		return writeResult, err
