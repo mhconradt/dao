@@ -43,7 +43,7 @@ type Address struct {
 }
 
 type Place struct {
-	ID         primitive.ObjectID `bson:"_id" json:"id,omitempty"`
+	ID         primitive.ObjectID `bson:"_id" json:"id"`
 	Name       string             `bson:"name,omitempty" json:"name,omitempty"`
 	Location   Location           `bson:"location,omitempty" json:"location,omitempty"`
 	ImageURL   string             `bson:"imageURL,omitempty" json:"imageURL,omitempty"`
@@ -123,7 +123,6 @@ func (dao *DAO) Delete(id string) (Place, error) {
 func MakeModel(inputChannel <-chan Place, outputChannel chan<- *mongo.InsertOneModel, done chan<- bool) {
 	for place := range inputChannel {
 		doc := bson.M{
-			"_id":        primitive.NewObjectID(),
 			"name":       place.Name,
 			"location":   place.Location,
 			"imageURL":   place.ImageURL,
