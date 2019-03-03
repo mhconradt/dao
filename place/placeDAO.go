@@ -52,6 +52,7 @@ type Place struct {
 	Price      float32            `bson:"price,omitempty" json:"price,omitempty"`
 	Categories []string           `bson:"categories,omitempty" json:"categories,omitempty"`
 	Hours      Hours              `bson:"hours,omitempty" json:"hours,omitempty"`
+	Type       string             `bson:"type,omitempty" json:"type,omitempty"`
 }
 
 type DAO struct {
@@ -106,7 +107,7 @@ func (dao *DAO) BulkWrite(p []Place) (*mongo.BulkWriteResult, error) {
 	opts := options.BulkWrite()
 	writeResult, err := dao.Collection.BulkWrite(context.Background(), modelList, opts)
 	if err != nil {
-	fmt.Println(err)
+		fmt.Println(err)
 		return writeResult, err
 	}
 	return writeResult, err
@@ -122,18 +123,17 @@ func (dao *DAO) Delete(id string) (Place, error) {
 func MakeModel(inputChannel <-chan Place, outputChannel chan<- *mongo.InsertOneModel, done chan<- bool) {
 	for place := range inputChannel {
 		doc := bson.M{
-			"name": place.Name,
-			"location": place.Location,
-			"imageURL": place.ImageURL,
-			"url": place.URL,
-			"rating": place.Rating,
-			"price": place.Price,
+			"name":       place.Name,
+			"location":   place.Location,
+			"imageURL":   place.ImageURL,
+			"url":        place.URL,
+			"rating":     place.Rating,
+			"price":      place.Price,
 			"categories": place.Categories,
-			"hours": place.Hours,
+			"hours":      place.Hours,
+			"type":       "Restaurant",
 		}
-		fmt.Println(doc)
 		newModel := mongo.NewInsertOneModel().SetDocument(doc)
-		fmt.Println(*newModel)
 		outputChannel <- newModel
 	}
 	return
