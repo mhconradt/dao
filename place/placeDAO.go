@@ -83,6 +83,11 @@ func (dao *DAO) Upsert(place Place) (Place, error) {
 	return p, err
 }
 
+func (dao *DAO) FilterEmpty() (*mongo.DeleteResult, error){
+	bigFilter := bson.M{"type": ""}
+	return dao.DB.Collection("PlaceBeta").DeleteMany(context.Background(), bigFilter)
+}
+
 func (dao *DAO) BulkWrite(p []Place, collection string) (*mongo.BulkWriteResult, error) {
 	numPlaces := len(p)
 	inputChannel := make(chan Place, numPlaces)
