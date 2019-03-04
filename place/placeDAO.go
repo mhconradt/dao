@@ -104,7 +104,7 @@ func (dao *DAO) BulkWrite(p []Place, collection string) (*mongo.BulkWriteResult,
 			runLoop = false
 		}
 	}
-	opts := options.BulkWrite()
+	opts := options.BulkWrite().SetOrdered(false)
 	writeResult, err := dao.DB.Collection(collection).BulkWrite(context.Background(), modelList, opts)
 	if err != nil {
 		fmt.Println(err)
