@@ -83,7 +83,7 @@ func (dao *DAO) Upsert(place Place) (Place, error) {
 	return p, err
 }
 
-func (dao *DAO) BulkWrite(p []Place) (*mongo.BulkWriteResult, error) {
+func (dao *DAO) BulkWrite(p []Place, collection string) (*mongo.BulkWriteResult, error) {
 	numPlaces := len(p)
 	inputChannel := make(chan Place, numPlaces)
 	outputChannel := make(chan *mongo.InsertOneModel)
@@ -105,12 +105,35 @@ func (dao *DAO) BulkWrite(p []Place) (*mongo.BulkWriteResult, error) {
 		}
 	}
 	opts := options.BulkWrite()
-	writeResult, err := dao.Collection.BulkWrite(context.Background(), modelList, opts)
+	writeResult, err := dao.DB.Collection(collection).BulkWrite(context.Background(), modelList, opts)
 	if err != nil {
 		fmt.Println(err)
 		return writeResult, err
 	}
 	return writeResult, err
+}
+
+func (dao *DAO) GetAll() ([]Place, error) {
+	var p []Place
+	collection := dao.DB.Collection("PlaceBeta")
+	bigFilter := bson.M{"type": "Restaurant"}
+	ctx := context.Background()
+	cur, err := collection.Find(ctx, bigFilter)
+	if err != nil {
+		return p, err
+	}
+	defer cur.Close(ctx)
+	for cur.Next(ctx) {
+		var plc Place
+		cur.Decode(&plc)
+		p = append(p, plc)
+	}
+	return p, nil
+}
+
+func (dao *DAO) DeleteAll() (*mongo.DeleteResult, error) {
+	bigFilter := bson.M{"type": "Restaurant"}
+	return dao.DB.Collection("PlaceBeta").DeleteMany(context.Background(), bigFilter)
 }
 
 func (dao *DAO) Delete(id string) (Place, error) {
