@@ -77,6 +77,7 @@ func (dao *DAO) FindById(id string) (Place, error) { //DONE
 
 func (dao *DAO) FindNear(lat, lng float64, radius int, filters []bson.M) (Place, error) { //DONE
 	var p Place
+	return p, nil
 }
 
 func (dao *DAO) Upsert(place Place) (Place, error) {
