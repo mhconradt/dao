@@ -10,12 +10,17 @@ import (
 	"github.com/mongodb/mongo-go-driver/mongo"
 	"github.com/mongodb/mongo-go-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"googlemaps.github.io/maps"
 )
 
+
+type GeoJSON struct {
+	Type string `bson:"type,omitempty" json:"type,omitempty"`
+	Coordinates []float64 `bson:"coordinates,omitempty" json:"coordinates,omitempty"`
+}
+
 type Location struct {
-	GeoPoint maps.LatLng `bson:"coordinates,omitempty" json:"coordinates,omitempty"`
 	Address  Address     `bson:"address,omitempty" json:"address,omitempty"`
+	GeoPoint GeoJSON `bson:"coordinates,omitempty" json:"coordinates,omitempty"`
 }
 
 // Closed or all day
