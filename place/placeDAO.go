@@ -12,15 +12,14 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-
 type GeoJSON struct {
-	Type string `bson:"type,omitempty" json:"type,omitempty"`
+	Type        string    `bson:"type,omitempty" json:"type,omitempty"`
 	Coordinates []float64 `bson:"coordinates,omitempty" json:"coordinates,omitempty"`
 }
 
 type Location struct {
-	Address  Address     `bson:"address,omitempty" json:"address,omitempty"`
-	GeoPoint GeoJSON `bson:"coordinates,omitempty" json:"coordinates,omitempty"`
+	Address  Address `bson:"address,omitempty" json:"address,omitempty"`
+	GeoPoint GeoJSON `bson:"geopoint,omitempty" json:"geopoint,omitempty"`
 }
 
 // Closed or all day
@@ -76,6 +75,13 @@ func (dao *DAO) FindById(id string) (Place, error) { //DONE
 	return p, err
 }
 
+func (dao *DAO) FindNear(lat, lng float64, radius int, filters []bson.M) (Place, error) { //DONE
+	var p Place
+	IDFilter := bson.M{"_id": id}
+	err := dao.Collection.FindOne(context.Background(), IDFilter).Decode(&p)
+	return p, err
+}
+
 func (dao *DAO) Upsert(place Place) (Place, error) {
 	var p Place
 	IDFilter := bson.M{"_id": place.ID}
@@ -88,7 +94,7 @@ func (dao *DAO) Upsert(place Place) (Place, error) {
 	return p, err
 }
 
-func (dao *DAO) FilterEmpty() (*mongo.DeleteResult, error){
+func (dao *DAO) FilterEmpty() (*mongo.DeleteResult, error) {
 	bigFilter := bson.M{"type": ""}
 	return dao.DB.Collection("PlaceBeta").DeleteMany(context.Background(), bigFilter)
 }
