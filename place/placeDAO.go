@@ -80,6 +80,10 @@ func (dao *DAO) Find(filters bson.D) ([]Place, error) { //DONE
 	ctx := context.Background()
 	opts := options.Find().SetLimit(50)
 	cur, err := dao.Collection.Find(context.Background(), filters, opts)
+	if err != nil {
+		fmt.Println(err)
+		return p, err
+	}
 	defer cur.Close(ctx)
 	for cur.Next(ctx) {
 		var place Place
