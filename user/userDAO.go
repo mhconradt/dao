@@ -16,7 +16,7 @@ import (
 type UserRecord struct {
 	ID          string     `bson:"_id" json:"id"`
 	UserName    string     `bson:"userName,omitempty" json:"userName,omitempty"`
-	UID          string     `bson:"uid" json:"uid"`
+	UID          string     `bson:"uid,omitempty" json:"uid,omitempty"`
 	FirstName   string     `bson:"firstName,omitempty" json:"firstName,omitempty"`
 	LastName    string     `bson:"lastName,omitempty" json:"lastName,omitempty"`
 	Birthday    string     `bson:"birthday,omitempty" json:"birthday,omitempty"`

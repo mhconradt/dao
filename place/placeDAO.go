@@ -75,8 +75,20 @@ func (dao *DAO) FindById(id string) (Place, error) { //DONE
 	return p, err
 }
 
-func (dao *DAO) FindNear(lat, lng float64, radius int, filters []bson.M) (Place, error) { //DONE
-	var p Place
+func (dao *DAO) Find(filters bson.D) ([]Place, error) { //DONE
+	var p []Place
+	ctx := context.Background()
+	opts := options.Find().SetLimit(50)
+	cur, err := dao.Collection.Find(context.Background(), filters, opts)
+	defer cur.Close(ctx)
+	for cur.Next(ctx) {
+		var place Place
+		err = cur.Decode(place)
+		if err != nil {
+			fmt.Println(err)
+		}
+		p = append(p, place)
+	}
 	return p, nil
 }
 
