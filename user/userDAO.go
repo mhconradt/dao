@@ -11,10 +11,11 @@ import (
 	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/mongodb/mongo-go-driver/mongo"
 	"github.com/mongodb/mongo-go-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type UserRecord struct {
-	ID          string     `bson:"_id" json:"id"`
+	ID          primitive.ObjectID     `bson:"_id" json:"id"`
 	UserName    string     `bson:"userName,omitempty" json:"userName,omitempty"`
 	UID          string     `bson:"uid,omitempty" json:"uid,omitempty"`
 	FirstName   string     `bson:"firstName,omitempty" json:"firstName,omitempty"`
