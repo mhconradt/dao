@@ -16,7 +16,7 @@ import (
 
 type UserRecord struct {
 	ID          primitive.ObjectID     `bson:"_id" json:"id"`
-	UserName    string     `bson:"userName,omitempty" json:"userName,omitempty"`
+	UserName    string     `bson:"username,omitempty" json:"username,omitempty"`
 	UID          string     `bson:"uid,omitempty" json:"uid,omitempty"`
 	FirstName   string     `bson:"firstName,omitempty" json:"firstName,omitempty"`
 	LastName    string     `bson:"lastName,omitempty" json:"lastName,omitempty"`
@@ -49,6 +49,7 @@ type UserPlaces struct {
 
 type Friend struct {
 	ID        string `bson:"_id" json:"id"`
+	UserName string `bson:"username,omitempty" json:"username,omitempty"`
 	FirstName string `bson:"firstName,omitempty" json:"firstName,omitempty"`
 	LastName  string `bson:"lastName,omitempty" json:"lastName,omitempty"`
 	Birthday  string `bson:"birthday,omitempty" json:"birthday,omitempty"`
