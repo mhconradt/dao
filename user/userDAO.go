@@ -81,6 +81,7 @@ func (dao *DAO) Find(field string, value string) (UserRecord, error) {
 
 func (dao *DAO) Upsert(user UserRecord) (UserRecord, error) {
 	var u UserRecord
+	fmt.Println("Yes yes y'all")
 	IDFilter := bson.M{"_id": user.ID}
 	fmt.Println(user)
 	fmt.Println(reflect.TypeOf(user.ID))
