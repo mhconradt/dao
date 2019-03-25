@@ -78,7 +78,7 @@ func (dao *DAO) Find(field string, value string) (UserRecord, error) {
 	err := dao.Collection.FindOne(context.Background(), filter).Decode(&u)
 	return u, err
 }
-
+/*
 func (dao *DAO) Upsert(user UserRecord) (UserRecord, error) {
 	var u UserRecord
 	fmt.Println("Yes yes y'all")
@@ -90,7 +90,7 @@ func (dao *DAO) Upsert(user UserRecord) (UserRecord, error) {
 	err := dao.Collection.FindOneAndUpdate(context.Background(), IDFilter, update, opts).Decode(&u)
 	return u, err
 }
-
+*/
 func (dao *DAO) Delete(id string) (UserRecord, error) {
 	var u UserRecord
 	IDFilter := bson.M{"_id": id}
