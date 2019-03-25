@@ -4,6 +4,7 @@ import (
 	//NATIVE
 	"context"
 	"fmt"
+	"reflect"
 	//  "dao/event"
 
 	//THIRD PARTY
@@ -81,6 +82,8 @@ func (dao *DAO) Find(field string, value string) (UserRecord, error) {
 func (dao *DAO) Upsert(user UserRecord) (UserRecord, error) {
 	var u UserRecord
 	IDFilter := bson.M{"_id": user.ID}
+	fmt.Println(user)
+	fmt.Println(reflect.TypeOf(user.ID))
 	update := bson.D{{"$set", user}} //mongo.NewUpdateOneModel().SetUpdate(user) ID filter works properly because it's same as FindById. The update model is incorrect.
 	opts := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
 	err := dao.Collection.FindOneAndUpdate(context.Background(), IDFilter, update, opts).Decode(&u)
