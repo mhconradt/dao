@@ -25,10 +25,8 @@ type UserRecord struct {
 	PhoneNumber string     `bson:"phoneNumber,omitempty" json:"phoneNumber,omitempty"`
 	ImageURL    string     `bson:"imageURL,omitempty" json:"imageURL,omitempty"`
 	Friends     []string   `bson:"friends,omitempty" json:"friends,omitempty"`
-	Requests    RequestMap `bson:"requests,omitempty" json:"requests,omitempty"`
-	Places      PlacesMap  `bson:"places,omitempty" json:"places,omitempty"`
 }
-
+// Need to be able to get documents like this. What the fuck
 type RequestMap struct {
 	Sent     []string `bson:"sent,omitempty" json:"sent,omitempty"`
 	Received []string `bson:"received,omitempty" json:"received,omitempty"`
